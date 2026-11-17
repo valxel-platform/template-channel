@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "conversation-message-received",
+  "type": "object",
+  "required": ["message_id", "user_id", "tenant", "channel", "text", "received_at"],
+  "properties": {
+    "message_id": { "type": "string", "pattern": "^msg_[0-9a-f]{32}$" },
+    "user_id": { "type": "string", "maxLength": 128 },
+    "tenant": { "type": "string", "maxLength": 64 },
+    "channel": { "enum": ["slack", "teams", "sms", "email"] },
+    "text": { "type": "string", "maxLength": 4000 },
+    "received_at": { "type": "string", "format": "date-time" }
+  }
+}

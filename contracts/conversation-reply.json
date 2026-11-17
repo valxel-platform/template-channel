@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "conversation-reply",
+  "type": "object",
+  "required": ["user_id", "channel", "text"],
+  "properties": {
+    "user_id": { "type": "string", "maxLength": 128 },
+    "channel": { "enum": ["slack", "teams", "sms", "email"] },
+    "text": { "type": "string", "maxLength": 4000 },
+    "in_reply_to": { "type": "string", "maxLength": 64 }
+  }
+}

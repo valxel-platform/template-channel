@@ -1,0 +1,24 @@
+# What G4 reviews with the design's Channels section. Names of secrets only (mounted under
+# /var/run/secrets/valxel), never their values. Everything here is synthetic.
+name: template-channel
+data_class: phi
+link_url: https://app.example-clinic.test/link
+received: conversation-message-received
+replies: conversation-reply
+channels:
+  - kind: slack
+    content: full
+    baa: true
+    secrets: { signing: slack-signing, token: slack-bot-token }
+    rate_per_minute: 30
+  - kind: sms
+    content: notice
+    baa: false
+    from: "+15555550100"
+    secrets: { auth_token: twilio-auth-token, account_sid: twilio-account-sid }
+    rate_per_minute: 10
+  - kind: email
+    content: notice
+    baa: false
+    from: care@mail.example-clinic.test
+    secrets: { signing: mailgun-signing, api_key: mailgun-api-key }
