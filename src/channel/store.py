@@ -42,6 +42,7 @@ class Store(Protocol):
     def save(self, ident: Identity) -> Identity: ...
     def add_link(self, nonce_hash: str, identity_id: str, ttl_s: int) -> None: ...
     def use_link(self, nonce_hash: str) -> Identity | None: ...
+    def open_link(self, identity_id: str) -> bool: ...
     def seen(self, key: str) -> bool: ...
     def accept(self, key: str, events: list[Outgoing]) -> bool: ...
     def was_sent(self, reply_id: str) -> bool: ...
@@ -83,6 +84,10 @@ class MemoryStore:
                 return None
             self.links[nonce_hash] = (row[0], row[1], True)
             return self.identities.get(row[0])
+
+    def open_link(self, identity_id: str) -> bool:
+        t = now()
+        return any(i == identity_id and not used and exp > t for i, exp, used in self.links.values())
 
     def seen(self, key: str) -> bool:
         with self.lock:
@@ -236,6 +241,15 @@ class PostgresStore:
                 return None
             row = conn.execute(BY_ID, (r[0],)).fetchone()
         return Identity(*row) if row else None
+
+    def open_link(self, identity_id: str) -> bool:
+        with self.pool.connection() as conn:
+            r = conn.execute(
+                "select 1 from channel_links where identity_id = %s and not used and expires_at > now()"
+                " limit 1",
+                (identity_id,),
+            ).fetchone()
+        return r is not None
 
     def seen(self, key: str) -> bool:
         with self.pool.connection() as conn:

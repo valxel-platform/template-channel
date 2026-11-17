@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     oidc_jwks_url: str = ""
     audience: str = "channel"
     tenant_claim: str = "organization"
+    # Sign-in links offered per channel per minute, across everyone (per replica): each is an outbound
+    # message, so a flood of spoofed senders can't run up the product's SMS or email bill.
+    link_offers_per_minute: int = 30
     database_url: str = ""
     kafka_bootstrap: str = ""
     kafka_config: dict[str, str] = {}

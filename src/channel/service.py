@@ -8,7 +8,9 @@ In, for each request on /channels/<kind>, in order:
             confirmation). START, UNSTOP: consent in. HELP: what this is and how to stop. On every
             channel, always answered, linked or not.
   linked?   no: one reply with a sign-in link carrying a single-use nonce (10 minutes; only its hash
-            is stored). The message itself goes nowhere: unlinked people reach nothing in the product.
+            is stored), unless the identity already has an open link, or the channel has offered
+            link_offers_per_minute links in the last minute (no outbound message is free: this
+            stops SMS pumping). The message itself goes nowhere: unlinked people reach nothing.
   rate      per identity (rate_per_minute): over it, the message is dropped and counted.
   publish   linked: the message as the `received` dataset's event (user, tenant, channel, text),
             through the outbox with its dedupe record.
@@ -89,6 +91,7 @@ class Receiver:
         product: str,
         teams: Any = None,
         clock: Any = time.time,
+        link_offers_per_minute: int = 30,
     ) -> None:
         self.cfg, self.secrets, self.store, self.contracts, self.auditor = (
             cfg,
@@ -105,6 +108,7 @@ class Receiver:
         )
         self.addresses, self.window, self.clock, self.teams = Addresses(secrets), Window(), clock, teams
         self.service = Actor(id=source.rsplit("/", 1)[-1], type="service")
+        self.link_offers_per_minute = link_offers_per_minute
 
     # ------------------------------------------------------------------ verification
     def verified(self, kind: str, headers: dict[str, str], body: bytes) -> bool:
@@ -207,6 +211,12 @@ class Receiver:
             self._say(ident, f"This is {self.product}. Reply STOP to stop messages here.")
             return OK
         if not ident.user_id:
+            if self.store.open_link(ident.id):
+                return OK  # the link they were sent still works
+            if not self.window.allow(f"link-offers:{kind}", self.link_offers_per_minute, self.clock()):
+                log.warning("channel.link_offers_limited kind=%s", kind)
+                events.record("channel.link_offers_limited", kind=kind)
+                return OK
             nonce = pysecrets.token_urlsafe(24)
             self.store.add_link(hashlib.sha256(nonce.encode()).hexdigest(), ident.id, LINK_TTL_S)
             events.record("channel.link_offered", kind=kind)

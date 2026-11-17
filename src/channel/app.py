@@ -111,6 +111,7 @@ def build(
         source=f"{settings.product}/{COMPONENT}",
         product=settings.product or "the product",
         teams=teams,
+        link_offers_per_minute=settings.link_offers_per_minute,
     )
     verifier = verifier or JwtVerifier(
         issuer=settings.oidc_issuer, jwks_url=settings.oidc_jwks_url, audience=settings.audience

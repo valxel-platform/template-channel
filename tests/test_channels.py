@@ -190,3 +190,13 @@ def test_teams_messages_are_verified_by_token_and_replies_go_where_it_says(env):
     [(where, text)] = r.senders["teams"].sent
     assert json.loads(where)["conversation"] == "c-1" and "nonce=" in text
     assert r.receive("teams", {"Authorization": "Bearer good"}, b"{}").status == 200  # no message: answered
+
+
+def test_link_offers_cant_be_used_to_run_up_a_texting_bill(env, caplog):
+    env.sms("hi", sid="A1")
+    env.sms("hi again", sid="A2")
+    assert len(env.senders["sms"].sent) == 1  # their open link still works: no second text
+    env.rt.receiver.link_offers_per_minute = 3
+    for i in range(10):  # a flood from spoofed numbers
+        env.sms("hi", sid=f"B{i}", sender=f"+1555000{i:04d}")
+    assert len(env.senders["sms"].sent) == 3 and "channel.link_offers_limited kind=sms" in caplog.text
