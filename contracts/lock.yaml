@@ -1,0 +1,4 @@
+# Written by the SDLC tool from the product's dataset catalog: the contract this component publishes
+# (messages received) and the one it reads (replies to send). Don't edit by hand.
+conversation-message-received: { topic: emr.conversation-message-received.v1, version: 1.0.0 }
+conversation-reply: { topic: emr.conversation-reply.v1, version: 1.0.0 }
