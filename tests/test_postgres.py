@@ -47,3 +47,12 @@ def test_identities_links_consent_dedupe_and_outbox(pg):
     pg.mark_sent("r1")
     pg.mark_sent("r1")
     assert pg.was_sent("r1")
+
+
+def test_open_links(pg):
+    a = pg.save(new_identity("sms", "hash-9", "sealed"))
+    assert not pg.open_link(a.id)
+    pg.add_link("n1", a.id, 600)
+    assert pg.open_link(a.id)
+    pg.use_link("n1")
+    assert not pg.open_link(a.id)
