@@ -1,0 +1,32 @@
+# The template conformance suite (.github/scripts/conformance.py, managed by the platform): the built
+# image does what every channel repo must. Someone texts STOP: the message, signed as Twilio signs
+# it (with the test token below), arrives, and the channel records their consent on the audit trail.
+image: "ci"  # the tag CI builds
+command: "uv run channel"  # conformance.py local: the app as a process
+# Synthetic test values, read from a folder as the deployed app reads its mounted secrets.
+files:
+  twilio-auth-token: conformance-twilio-token
+  twilio-account-sid: ACconformance
+  slack-signing: conformance-slack-signing
+  slack-bot-token: conformance-slack-token
+  mailgun-signing: conformance-mailgun-signing
+  mailgun-api-key: conformance-mailgun-key
+  address-pepper: conformance-address-pepper
+  address-key: "Y29uZm9ybWFuY2UtdGVzdC1vbmx5LW5vdC1zZWNyZXQ="  # gitleaks:allow - base64 of 'conformance-test-only-not-secret', a Fernet key for this test
+env:
+  CHANNEL_SECRETS_DIR: "{files}"
+  CHANNEL_PUBLIC_URL: http://127.0.0.1:8080
+  CHANNEL_OIDC_ISSUER: "{issuer}"
+  CHANNEL_OIDC_JWKS_URL: "{jwks}"
+  CHANNEL_FLAGS_URL: "{ofrep}"
+  CHANNEL_PRODUCT: conformance
+  CHANNEL_ENVIRONMENT: ci
+  CHANNEL_AUDIT_SINK: log
+steps:
+  # The signature is Twilio's over the URL and these exact fields, with the test token above.
+  - method: POST
+    path: /channels/sms
+    headers: {X-Twilio-Signature: "oqwxq39Fum/RZ2DqFkrZCsn71Lc="}
+    form: {From: "+15555550123", To: "+15555550100", Body: STOP, MessageSid: SMconformance1, AccountSid: ACconformance}
+# No flag yet: the example code reads none (a feature adds its own, flags.enabled).
+checks: [audit, tracing, events]
