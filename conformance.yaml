@@ -28,5 +28,9 @@ steps:
     path: /channels/sms
     headers: {X-Twilio-Signature: "oqwxq39Fum/RZ2DqFkrZCsn71Lc="}
     form: {From: "+15555550123", To: "+15555550100", Body: STOP, MessageSid: SMconformance1, AccountSid: ACconformance}
-# No flag yet: the example code reads none (a feature adds its own, flags.enabled).
-checks: [audit, tracing, events]
+  # HELP from another number: its answer reads the example feature's flag (service.example_flag).
+  - method: POST
+    path: /channels/sms
+    headers: {X-Twilio-Signature: "w9Pvn+C8MJZbUkzQ0ZTwXfSuMlE="}
+    form: {From: "+15555550124", To: "+15555550100", Body: HELP, MessageSid: SMconformance2, AccountSid: ACconformance}
+checks: [audit, tracing, events, flags]
