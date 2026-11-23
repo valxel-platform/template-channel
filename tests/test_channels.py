@@ -200,3 +200,25 @@ def test_link_offers_cant_be_used_to_run_up_a_texting_bill(env, caplog):
     for i in range(10):  # a flood from spoofed numbers
         env.sms("hi", sid=f"B{i}", sender=f"+1555000{i:04d}")
     assert len(env.senders["sms"].sent) == 3 and "channel.link_offers_limited kind=sms" in caplog.text
+
+
+def test_the_example_feature_is_behind_its_flag(env):
+    """The pattern every feature follows: its new behaviour reads its flag, and off is today's."""
+    from openfeature.provider.in_memory_provider import InMemoryFlag, InMemoryProvider
+
+    from channel import flags
+    from channel.service import example_flag
+
+    assert (
+        example_flag("emr") == "emr.example.help-start-hint"
+        and example_flag("") == "example.example.help-start-hint"
+    )
+    env.sms("help", sid="SM10")
+    assert "Reply START" not in env.senders["sms"].sent[-1][1]
+    on = InMemoryFlag("on", {"on": True, "off": False})
+    flags.use_provider(InMemoryProvider({example_flag(env.settings.product): on}))
+    try:
+        env.sms("help", sid="SM11")
+        assert env.senders["sms"].sent[-1][1].endswith("Reply START to get them again.")
+    finally:
+        flags.use_provider(InMemoryProvider({}))

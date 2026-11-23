@@ -32,7 +32,7 @@ import uuid
 from dataclasses import dataclass, replace
 from typing import Any
 
-from . import cohorts, events, verify
+from . import cohorts, events, flags, verify
 from .audit import Actor, Auditor
 from .config import Config
 from .contracts import ContractError, Contracts, count
@@ -44,6 +44,15 @@ from .store import Identity, Store, new_identity, now
 
 log = logging.getLogger("channel.service")
 STOP = {"stop", "stopall", "unsubscribe", "cancel", "end", "quit"}
+
+
+def example_flag(product: str) -> str:
+    """The example feature's flag. It shows the pattern every feature follows: the tool gives the
+    feature a flag in the product's Flipt (on in dev and staging, off in production until it's
+    released) and the new behaviour reads it. Replace it with your first feature's own."""
+    return f"{product or 'example'}.example.help-start-hint"
+
+
 START = {"start", "unstop", "yes"}
 HELP = {"help", "info"}
 LINK_TTL_S = 600
@@ -208,7 +217,11 @@ class Receiver:
             )
             return OK
         if word in HELP:
-            self._say(ident, f"This is {self.product}. Reply STOP to stop messages here.")
+            text = f"This is {self.product}. Reply STOP to stop messages here."
+            # The template's example feature, behind its flag: off, HELP's answer is today's.
+            if flags.enabled(example_flag(self.source.split("/", 1)[0]), user=ident.id):
+                text += " Reply START to get them again."
+            self._say(ident, text)
             return OK
         if not ident.user_id:
             if self.store.open_link(ident.id):
