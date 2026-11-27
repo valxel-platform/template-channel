@@ -7,6 +7,8 @@ import time
 
 import pytest
 
+from channel.app import metrics_body
+
 from .conftest import PHONE, SECRETS
 
 
@@ -145,7 +147,8 @@ def test_health_and_routes(env):
     assert env.client.get("/healthz").json() == {"status": "ok"}
     assert env.client.get("/readyz").status_code == 200
     assert env.client.post("/channels/teams").status_code == 404  # not configured
-    assert env.client.get("/docs").status_code == 404 and "valxel_events" in env.client.get("/metrics").text
+    assert env.client.get("/docs").status_code == 404 and env.client.get("/metrics").status_code == 404
+    assert "valxel_events" in metrics_body()[0].decode()  # on the management port (8081)
 
 
 def test_an_unmounted_signing_secret_refuses_everything(env, caplog):
