@@ -2,7 +2,8 @@
 
 Routes: POST /channels/<kind> for each channel in channel.yaml (the only ones the platform
 exposes outside the cluster: each provider calls its own), POST /links/{nonce}/confirm (the BFF,
-with the signed-in person's token), /healthz, /readyz and /metrics (in-cluster only).
+with the signed-in person's token), /healthz and /readyz (in-cluster only). /metrics is on the
+management port (management.py).
 
 Start-up refuses to run when channel.yaml is invalid, a secret it names (or the address key and
 pepper) isn't mounted, a dataset has no contract, a PHI or payments product's Kafka isn't TLS, or a
@@ -20,7 +21,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 
-from . import cohorts, errors, events, flags, telemetry
+from . import cohorts, errors, events, flags, management, telemetry
 from .audit import Actor, Auditor, AuditUnavailable, make_sink, require_encryption
 from .auth import Caller, JwtVerifier, RateLimiter, Verifier, authenticate
 from .component import COMPONENT
@@ -190,10 +191,6 @@ def create_app(
             status_code=503 if dead else 200,
         )
 
-    @app.get("/metrics", include_in_schema=False)
-    def metrics() -> Response:
-        return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
-
     app.add_middleware(cohorts.CohortMiddleware)
     app.add_middleware(errors.TraceResponseMiddleware)
     app.state.runtime = rt
@@ -245,9 +242,19 @@ def start_workers(rt: Runtime) -> None:
     events.start_reporting()
 
 
+def metrics_body() -> tuple[bytes, str]:
+    """What the management port serves (management.py): every metric, the product events counter
+    (valxel_events_total) among them."""
+    return generate_latest(REGISTRY), CONTENT_TYPE_LATEST
+
+
 def main() -> None:
     import uvicorn
 
     settings = Settings()
     telemetry.setup_logging(COMPONENT)
-    uvicorn.run(create_app(settings), host="0.0.0.0", port=settings.port, log_config=None)  # noqa: S104
+    app = create_app(settings)
+    # /metrics on the management port (MANAGEMENT_PORT, 8081), apart from the API, as in the Java
+    # templates: the mesh lets the data plane's metrics collector reach that port only.
+    management.serve(metrics_body)
+    uvicorn.run(app, host="0.0.0.0", port=settings.port, log_config=None)  # noqa: S104

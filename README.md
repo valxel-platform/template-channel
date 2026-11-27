@@ -37,6 +37,13 @@ Slack/Teams/SMS/email ──signed──▶ /channels/<kind> ─▶ verified? li
 - For every product: `address-pepper` (a random string) and `address-key` (a Fernet key; put the
   old key on the second line while rotating).
 
+## Ports
+
+The API is on 8080, with `/healthz` and `/readyz` for Kubernetes' probes. `/metrics` is on the
+management port, `MANAGEMENT_PORT` (8081), as Spring's actuator is in the Java templates. The
+platform's metrics collector scrapes it there, and the product's mesh lets the collector reach that
+port and no other. The API port serves no metrics.
+
 ## Running
 
 ```sh
