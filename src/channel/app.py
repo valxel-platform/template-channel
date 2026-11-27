@@ -21,7 +21,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 
-from . import cohorts, errors, events, flags, management, telemetry
+from . import cohorts, errors, events, flags, http_metrics, management, telemetry
 from .audit import Actor, Auditor, AuditUnavailable, make_sink, require_encryption
 from .auth import Caller, JwtVerifier, RateLimiter, Verifier, authenticate
 from .component import COMPONENT
@@ -191,6 +191,8 @@ def create_app(
             status_code=503 if dead else 200,
         )
 
+    # Requests, errors and latency per route, on the management port (http_metrics.py).
+    app.add_middleware(http_metrics.HttpMetrics)
     app.add_middleware(cohorts.CohortMiddleware)
     app.add_middleware(errors.TraceResponseMiddleware)
     app.state.runtime = rt
